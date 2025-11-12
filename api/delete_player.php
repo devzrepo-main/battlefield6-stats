@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../config.php';
+require_once __DIR__ . '/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   json_res(['error' => 'POST required'], 405);
