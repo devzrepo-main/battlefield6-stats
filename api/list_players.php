@@ -15,3 +15,4 @@ while ($row = $result->fetch_assoc()) {
 
 json_res(['players' => $players]);
 ?>
+
