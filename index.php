@@ -1,182 +1,120 @@
 <?php
-// Battlefield 6 Tracker - Frontend (no JS folder required)
+// index.php — Battlefield 6 Stats Tracker (frontend)
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>Battlefield 6 Stats Tracker</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: 'Orbitron', sans-serif;
-      background: #0d1117;
-      color: #e3e3e3;
+      font-family: Arial, sans-serif;
+      background-color: #0d1117;
+      color: #e0e6ed;
+      text-align: center;
       margin: 0;
+      padding: 0;
+    }
+    h1 {
+      color: #ff9f1c;
+      margin-top: 40px;
+      text-shadow: 0 0 10px #ff9f1c;
+    }
+    form {
+      margin: 30px auto;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
       padding: 20px;
+      max-width: 400px;
+      box-shadow: 0 0 10px #0d1117;
     }
-
-    h1 { color: #f79d00; text-align: center; }
-
-    .container {
-      max-width: 900px;
-      margin: auto;
-    }
-
-    .input-row {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
     input, select, button {
-      padding: 8px;
+      margin: 8px;
+      padding: 10px;
       font-size: 1rem;
-      border: 1px solid #333;
-      border-radius: 4px;
+      border-radius: 5px;
+      border: 1px solid #30363d;
+      background: #0d1117;
+      color: #e0e6ed;
+      width: calc(100% - 24px);
     }
-
     button {
-      background: #f79d00;
+      background: #ff9f1c;
       color: #000;
       font-weight: bold;
       cursor: pointer;
-      transition: background 0.2s;
     }
-
-    button:hover { background: #ffc93c; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    button:hover {
+      background: #ffb347;
+    }
+    pre {
+      text-align: left;
+      margin: 20px auto;
       background: #161b22;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 600px;
+      overflow-x: auto;
+      white-space: pre-wrap;
     }
-
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #2d333b;
-      text-align: center;
-    }
-
-    th { background: #21262d; color: #f79d00; }
   </style>
 </head>
-
 <body>
-  <div class="container">
-    <h1>Battlefield 6 Tracker</h1>
+  <h1>Battlefield 6 Stats Tracker</h1>
 
-    <div class="input-row">
-      <input type="text" id="username" placeholder="EA or PSN Username" />
-      <select id="platform">
-        <option value="psn">PSN</option>
-        <option value="xbl">Xbox</option>
-        <option value="pc">PC</option>
-        <option value="steam">Steam</option>
-      </select>
-      <button id="addBtn">Add Player</button>
-      <button id="refreshBtn">Refresh All</button>
-    </div>
+  <form id="lookupForm">
+    <select id="platform" required>
+      <option value="">Select Platform</option>
+      <option value="psn">PlayStation Network</option>
+      <option value="xbl">Xbox Live</option>
+      <option value="pc">EA / Origin PC</option>
+    </select>
+    <input type="text" id="username" placeholder="Enter player name / EA ID" required />
+    <button type="submit">Look Up Stats</button>
+  </form>
 
-    <table id="leaderboard">
-      <thead>
-        <tr>
-          <th>#</th><th>Handle</th><th>Platform</th>
-          <th>Kills</th><th>Deaths</th><th>Wins</th>
-          <th>Losses</th><th>Score</th>
-        </tr>
-      </thead>
-      <tbody id="playersTable"></tbody>
-    </table>
-  </div>
+  <div id="status"></div>
+  <pre id="result">Results will appear here...</pre>
 
   <script>
-    const API_BASE = 'http://216.212.56.146/battlefield6-stats/api';
+  document.getElementById('lookupForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const platform = document.getElementById('platform').value.trim();
+    const username = document.getElementById('username').value.trim();
+    const statusEl = document.getElementById('status');
+    const resultEl = document.getElementById('result');
 
-    // Utility for POST requests
-    async function apiPost(endpoint, data) {
-      const res = await fetch(`${API_BASE}/${endpoint}.php`, {
+    if (!platform || !username) {
+      alert('Please select a platform and enter a username.');
+      return;
+    }
+
+    statusEl.textContent = 'Fetching stats...';
+    resultEl.textContent = '';
+
+    try {
+      const res = await fetch('api/add_player.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(data)
+        body: `platform=${encodeURIComponent(platform)}&username=${encodeURIComponent(username)}`
       });
-      let json;
-      try {
-        json = await res.json();
-      } catch (e) {
-        console.error('Invalid JSON from API', e);
-        alert('Server returned invalid response.');
-        return null;
-      }
-      return json;
-    }
 
-    // === Add Player handler ===
-    async function addPlayer() {
-      const username = document.getElementById('username').value.trim();
-      const platform = document.getElementById('platform').value.trim();
-      if (!username || !platform) {
-        alert('Please enter both username and platform.');
-        return;
-      }
-      const data = await apiPost('add_player', { username, platform });
-      if (!data) return;
-      if (data.error) {
-        alert('Error: ' + data.error + (data.detail ? ' - ' + data.detail : ''));
-        console.error('Lookup failed:', data);
-        return;
-      }
-      alert('✅ Player added: ' + data.player.handle);
-      loadPlayers();
-    }
-
-    // === Refresh all players ===
-    async function refreshAll() {
-      const res = await fetch(`${API_BASE}/refresh_player.php`);
       const data = await res.json();
-      if (data.ok) {
-        alert('Refreshed ' + data.updated.length + ' players.');
-        loadPlayers();
+      statusEl.textContent = '';
+
+      if (data.error) {
+        resultEl.textContent = `❌ Error: ${data.error}\n${data.detail ? data.detail : ''}`;
       } else {
-        alert('Error refreshing players.');
+        resultEl.textContent = JSON.stringify(data.player, null, 2);
       }
-    }
 
-    // === Load leaderboard ===
-    async function loadPlayers() {
-      try {
-        const res = await fetch(`${API_BASE}/list_players.php`);
-        const data = await res.json();
-        const table = document.getElementById('playersTable');
-        table.innerHTML = '';
-        data.players.forEach((p, i) => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${i + 1}</td>
-            <td>${p.handle}</td>
-            <td>${p.platform}</td>
-            <td>${p.kills}</td>
-            <td>${p.deaths}</td>
-            <td>${p.wins}</td>
-            <td>${p.losses}</td>
-            <td>${p.score.toLocaleString()}</td>
-          `;
-          table.appendChild(row);
-        });
-      } catch (err) {
-        console.error(err);
-        alert('Failed to load leaderboard.');
-      }
+    } catch (err) {
+      statusEl.textContent = '';
+      resultEl.textContent = '❌ Request failed: ' + err.message;
     }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('addBtn').addEventListener('click', addPlayer);
-      document.getElementById('refreshBtn').addEventListener('click', refreshAll);
-      loadPlayers();
-    });
+  });
   </script>
 </body>
 </html>
