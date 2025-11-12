@@ -1,0 +1,8 @@
+<?php
+// Copy this file to config.php and fill in your credentials
+$DB_HOST = 'localhost';
+$DB_USER = 'root';
+$DB_PASS = 'YOUR_PASSWORD_HERE';
+$DB_NAME = 'battlefield6';
+$TRACKER_API_KEY = 'YOUR_TRACKERGG_API_KEY';
+?>
